@@ -1,0 +1,5 @@
+;http://svdragster.dtdns.net
+name=AutoRank
+main-class=de.svdragster.autorank.AutoRank
+author=svdragster
+version=1.0

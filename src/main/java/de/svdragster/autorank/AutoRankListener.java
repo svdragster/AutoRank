@@ -20,7 +20,7 @@ import net.canarymod.api.inventory.ItemType;
 import net.canarymod.api.inventory.PlayerInventory;
 import net.canarymod.api.statistics.Stat;
 import net.canarymod.api.world.blocks.BlockType;
-import net.canarymod.chat.Colors;
+import net.canarymod.chat.ChatFormat;
 import net.canarymod.hook.HookHandler;
 import net.canarymod.hook.player.ConnectionHook;
 import net.canarymod.hook.player.InventoryHook;
@@ -35,7 +35,8 @@ public class AutoRankListener implements PluginListener {
 
 	//public static ArrayList<PlayerStats> allPlayerStats = new ArrayList<PlayerStats>();
 	public static ArrayList<RankUp> allRankUps = new ArrayList<RankUp>();
-	String VERSION = "1.0";
+	private String VERSION;
+	private AutoRank owner;
 	ArrayList<String> stats = new ArrayList<String>();
 	public static final String USEITEM = "stat.useItem.";
 	public static final String MINEBLOCK = "stat.mineBlock.";
@@ -43,7 +44,9 @@ public class AutoRankListener implements PluginListener {
 	public static final String CRAFTITEM = "stat.craftItem.";
 	public static HashMap<EntityType, String> mobs = new HashMap<EntityType, String>();
 
-	public AutoRankListener(boolean replace) {
+	public AutoRankListener(AutoRank owner, boolean replace) {
+		this.setOwner(owner);
+		this.VERSION = owner.getVersion();
 		if (replace) { 
 			stats.addAll(Arrays.asList(new String[]{USEITEM, MINEBLOCK, KILLENTITY, CRAFTITEM}));
 			ArrayList<String> strMobs = new ArrayList<String>();
@@ -249,17 +252,19 @@ public class AutoRankListener implements PluginListener {
 	@HookHandler
 	public void onRankUp(RankUpHook hook) {
 		Player player = hook.getPlayer();
-		RankUp rankUp = hook.getRankUp();
-		String newGroupStr = rankUp.getNewGroup();
-		Group currentGroup = player.getGroup();
-		Group newGroup = (Canary.usersAndGroups().getGroup(newGroupStr));
-		if (newGroupStr != null && !newGroupStr.isEmpty()) {
-			if (!currentGroup.getName().equals(newGroupStr)) {
-				if (currentGroup.hasControlOver(newGroup)) { // Prevents downgrading, e.g. Admin to Moderator or Player to Visitor
-					return;
+		if (player.hasPermission("autorank.player.rankup")) {
+			RankUp rankUp = hook.getRankUp();
+			String newGroupStr = rankUp.getNewGroup();
+			Group currentGroup = player.getGroup();
+			Group newGroup = (Canary.usersAndGroups().getGroup(newGroupStr));
+			if (newGroupStr != null && !newGroupStr.isEmpty()) {
+				if (!currentGroup.getName().equals(newGroupStr)) {
+					if (currentGroup.hasControlOver(newGroup)) { // Prevents downgrading, e.g. Admin to Moderator or Player to Visitor
+						return;
+					}
+					player.setGroup(newGroup);
+					Canary.getServer().broadcastMessage(ChatFormat.GOLD + "[AutoRank] " + ChatFormat.GREEN + player.getName() + ChatFormat.GREEN + " has ranked up to " + ChatFormat.GREEN + newGroupStr + ChatFormat.GREEN + "!");
 				}
-				player.setGroup(newGroup);
-				Canary.getServer().broadcastMessage(Colors.ORANGE + "[AutoRank] " + Colors.GREEN + player.getName() + Colors.LIGHT_GREEN + " has ranked up to " + Colors.GREEN + newGroupStr + Colors.LIGHT_GREEN + "!");
 			}
 		}
 	}
@@ -304,8 +309,10 @@ public class AutoRankListener implements PluginListener {
 				if ((result != null) && (!result.isEmpty())) {
 					player.message(result);
 				}
+			} catch (Error e) {
+				Canary.getServer().broadcastMessageToAdmins(ChatFormat.GOLD + "[AutoRank] " + ChatFormat.RED + e.getMessage());
 			} catch (Exception e) {
-				e.printStackTrace();
+				Canary.getServer().broadcastMessageToAdmins(ChatFormat.GOLD + "[AutoRank] " + ChatFormat.RED + e.getMessage());
 			}
 		}
 	}
@@ -550,5 +557,17 @@ public class AutoRankListener implements PluginListener {
 	public void onItemPickup(ItemPickupHook hook) {
 		Player player = hook.getPlayer();
 		checkStats(player);
+	}
+
+
+
+	public AutoRank getOwner() {
+		return owner;
+	}
+
+
+
+	public void setOwner(AutoRank owner) {
+		this.owner = owner;
 	}
 }
